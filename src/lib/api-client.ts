@@ -1,4 +1,9 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://93.127.172.171:5000/api";
+
+// Debug: Log the API base URL (only in development)
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  console.log("🔗 API Base URL:", API_BASE_URL);
+}
 
 class ApiClient {
   private baseURL: string;
@@ -6,6 +11,10 @@ class ApiClient {
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
+    // Debug: Log the base URL being used
+    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+      console.log("🔗 ApiClient initialized with baseURL:", this.baseURL);
+    }
     if (typeof window !== "undefined") {
       this.token = localStorage.getItem("auth_token");
     }
@@ -25,9 +34,9 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...options.headers,
+      ...(options.headers as Record<string, string> || {}),
     };
 
     if (this.token) {

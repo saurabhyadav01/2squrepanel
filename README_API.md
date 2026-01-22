@@ -4,9 +4,9 @@ This document describes the API integration for the 2Square admin panel.
 
 ## Setup
 
-1. Set the API URL in `.env.local`:
+1. Set the API URL in `.env.local` (optional, defaults to production API):
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_API_URL=http://93.127.172.171:5000/api
 ```
 
 2. Make sure the backend server is running on port 5000.
