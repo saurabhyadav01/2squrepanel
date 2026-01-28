@@ -25,6 +25,11 @@ import {
   ArrowDownRight,
   Sparkles,
   Filter,
+  Wallet,
+  Target,
+  Eye,
+  Star,
+  Calendar,
 } from "lucide-react";
 import { productService } from "@/services/product.service";
 import { orderService } from "@/services/order.service";
@@ -79,7 +84,7 @@ export default function Dashboard() {
   const productsArray = Array.isArray(products) ? products : [];
   const ordersArray = Array.isArray(orders) ? orders : [];
   const usersArray = Array.isArray(users) ? users : [];
-  
+
   // Use recent orders from analytics if available
   const recentOrdersFromAnalytics = analyticsStats?.recentOrders || [];
 
@@ -94,7 +99,24 @@ export default function Dashboard() {
   const pendingOrders = analyticsStats?.pendingOrders ?? ordersArray.filter((o) => o.status === "pending").length;
   const lowStockProducts = analyticsStats?.lowStockProducts ?? productsArray.filter((p) => p.stock_quantity < 10).length;
   const completedOrders = analyticsStats?.ordersByStatus?.delivered ?? ordersArray.filter((o) => o.status === "delivered").length;
-  
+
+  // Calculate Average Order Value
+  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  // Calculate Today's stats
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayOrders = ordersArray.filter((o) => {
+    const orderDate = new Date(o.created_at);
+    orderDate.setHours(0, 0, 0, 0);
+    return orderDate.getTime() === today.getTime();
+  });
+  const todayRevenue = todayOrders.reduce((sum, order) => {
+    const amount = typeof order.total_amount === "string" ? parseFloat(order.total_amount) : (order.total_amount || 0);
+    return sum + amount;
+  }, 0);
+  const todayOrderCount = todayOrders.length;
+
   // Calculate revenue growth (mock data for now)
   const revenueGrowth = 12.5;
   const orderGrowth = 8.3;
@@ -127,12 +149,16 @@ export default function Dashboard() {
     return order.status === orderStatusFilter;
   });
   const recentOrders = filteredRecentOrders.slice(0, 5);
-  
-  // Top products by stock
-  const topProducts = productsArray.slice(0, 5).map((p: any) => ({
-    name: p.name?.length > 20 ? p.name.substring(0, 20) + "..." : p.name || "Unknown",
+
+  // Top selling products (with mock sales data - can be replaced with real API data)
+  const topSellingProducts = productsArray.slice(0, 5).map((p: any, index: number) => ({
+    name: p.name?.length > 15 ? p.name.substring(0, 15) + "..." : p.name || "Unknown",
+    fullName: p.name || "Unknown",
     stock: p.stock_quantity || 0,
-    sales: Math.floor(Math.random() * 50) + 10, // Mock sales data
+    sales: Math.floor(Math.random() * 100) + 20, // Mock sales data
+    revenue: (Math.floor(Math.random() * 100) + 20) * (Number(p.price) || 100),
+    rating: (Math.random() * 2 + 3).toFixed(1), // Mock rating 3.0-5.0
+    image: p.image_url || null,
   }));
 
   const isLoading = analyticsLoading || productsLoading || ordersLoading || usersLoading;
@@ -266,6 +292,87 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Today's Overview Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+        <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:border-green-500/50 bg-gradient-to-br from-green-500/5 to-card animate-slide-up group hover:scale-105" style={{ animationDelay: "0.45s" }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Calendar size={14} />
+                  Today's Revenue
+                </p>
+                <p className="text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400">
+                  {isLoading ? (
+                    <span className="inline-block w-24 h-8 bg-muted rounded animate-pulse"></span>
+                  ) : (
+                    <AnimatedNumber value={todayRevenue} duration={1500} decimals={0} prefix="₹" />
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {todayOrderCount} orders today
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-green-500/20 to-green-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <Wallet className="h-8 w-8 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:border-purple-500/50 bg-gradient-to-br from-purple-500/5 to-card animate-slide-up group hover:scale-105" style={{ animationDelay: "0.5s" }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Target size={14} />
+                  Avg. Order Value
+                </p>
+                <p className="text-2xl md:text-3xl font-bold text-purple-600 dark:text-purple-400">
+                  {isLoading ? (
+                    <span className="inline-block w-24 h-8 bg-muted rounded animate-pulse"></span>
+                  ) : (
+                    <AnimatedNumber value={averageOrderValue} duration={1500} decimals={0} prefix="₹" />
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Per order average
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp className="h-8 w-8 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:border-cyan-500/50 bg-gradient-to-br from-cyan-500/5 to-card animate-slide-up group hover:scale-105" style={{ animationDelay: "0.55s" }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Eye size={14} />
+                  Order Completion
+                </p>
+                <p className="text-2xl md:text-3xl font-bold text-cyan-600 dark:text-cyan-400">
+                  {isLoading ? (
+                    <span className="inline-block w-16 h-8 bg-muted rounded animate-pulse"></span>
+                  ) : (
+                    <>{totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0}%</>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {completedOrders} of {totalOrders} delivered
+                </p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-cyan-500/10 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <Target className="h-8 w-8 text-cyan-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
@@ -281,44 +388,44 @@ export default function Dashboard() {
               <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0088FE" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#0088FE" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0088FE" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0088FE" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00C49F" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00C49F" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#00C49F" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#00C49F" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                   }}
                   animationDuration={300}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#0088FE" 
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#0088FE"
                   strokeWidth={2}
-                  fillOpacity={1} 
+                  fillOpacity={1}
                   fill="url(#colorRevenue)"
                   name="Revenue"
                   animationBegin={0}
                   animationDuration={1000}
                   animationEasing="ease-out"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="orders" 
-                  stroke="#00C49F" 
+                <Area
+                  type="monotone"
+                  dataKey="orders"
+                  stroke="#00C49F"
                   strokeWidth={2}
-                  fillOpacity={1} 
+                  fillOpacity={1}
                   fill="url(#colorOrders)"
                   name="Orders"
                   animationBegin={200}
@@ -359,9 +466,9 @@ export default function Dashboard() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
@@ -374,6 +481,112 @@ export default function Dashboard() {
               <div className="flex items-center justify-center h-[300px] text-muted-foreground animate-fade-in">
                 No order data available
               </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Selling Products Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Products Bar Chart */}
+        <Card className="border-2 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] animate-slide-up" style={{ animationDelay: "0.65s" }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="text-yellow-500 animate-pulse-slow" size={20} />
+              Top Selling Products
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topSellingProducts.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={topSellingProducts} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="salesGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                      <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.8} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis type="number" className="text-xs" />
+                  <YAxis type="category" dataKey="name" className="text-xs" width={80} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value: number) => [`${value} units`, 'Sales']}
+                    animationDuration={300}
+                  />
+                  <Bar
+                    dataKey="sales"
+                    fill="url(#salesGradient)"
+                    radius={[0, 4, 4, 0]}
+                    animationBegin={0}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground animate-fade-in">
+                No product data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Products List */}
+        <Card className="border-2 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] animate-slide-up" style={{ animationDelay: "0.7s" }}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Package className="text-primary animate-pulse-slow" size={20} />
+                Product Performance
+              </CardTitle>
+              <Link href="/products">
+                <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
+                  View All
+                  <ArrowUpRight size={14} className="ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {topSellingProducts.length > 0 ? (
+              <div className="space-y-3">
+                {topSellingProducts.map((product, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-all duration-300 group animate-fade-in"
+                    style={{ animationDelay: `${0.75 + index * 0.05}s` }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center font-bold text-primary">
+                        #{index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{product.fullName.length > 25 ? product.fullName.substring(0, 25) + "..." : product.fullName}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Star size={10} className="text-yellow-500 fill-yellow-500" />
+                            {product.rating}
+                          </span>
+                          <span>•</span>
+                          <span>{product.stock} in stock</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-sm text-green-600 dark:text-green-400">{formatInr(product.revenue)}</p>
+                      <p className="text-xs text-muted-foreground">{product.sales} sold</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No products found</p>
             )}
           </CardContent>
         </Card>
@@ -422,7 +635,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {recentOrders.map((order, index) => (
                   <Link key={order.id} href={`/orders/${order.id}`}>
-                    <div 
+                    <div
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-all duration-300 cursor-pointer group hover:scale-[1.02] hover:shadow-md animate-fade-in"
                       style={{ animationDelay: `${0.8 + index * 0.1}s` }}
                     >
@@ -435,15 +648,14 @@ export default function Dashboard() {
                           {formatInr(typeof order.total_amount === "string" ? parseFloat(order.total_amount) : (order.total_amount || 0))} • {new Date(order.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 group-hover:scale-110 ${
-                        order.status === "delivered"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : order.status === "pending"
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 group-hover:scale-110 ${order.status === "delivered"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        : order.status === "pending"
                           ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                           : order.status === "processing"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                      }`}>
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                        }`}>
                         {order.status}
                       </span>
                     </div>

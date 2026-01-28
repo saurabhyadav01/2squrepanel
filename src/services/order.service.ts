@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/api-client";
 export interface Order {
   id: string;
   user_id: string;
+  customer_email?: string;
   total_amount: number;
   status: string;
   shipping_address: any;

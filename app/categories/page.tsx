@@ -25,7 +25,7 @@ export default function CategoriesPage() {
     mutationFn: (data: any) => categoryService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      setNewCategory({ name: "", description: "" });
+      setNewCategory({ name: "", description: "", slug: "", imageUrl: "", isActive: true });
       setIsAdding(false);
       toast.success("Category created successfully");
     },

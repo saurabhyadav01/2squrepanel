@@ -95,7 +95,7 @@ export default function OrdersPage() {
 
   // Calculate stats
   const totalOrders = filteredOrders.length;
-  const totalRevenue = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total_amount), 0);
+  const totalRevenue = filteredOrders.reduce((sum, order) => sum + Number(order.total_amount), 0);
   const pendingCount = filteredOrders.filter((o) => o.status === "pending").length;
   const processingCount = filteredOrders.filter((o) => o.status === "processing").length;
 
@@ -241,7 +241,7 @@ export default function OrdersPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <CreditCard size={16} className="text-muted-foreground" />
-                        <span className="font-bold text-lg">{formatInr(parseFloat(order.total_amount))}</span>
+                        <span className="font-bold text-lg">{formatInr(Number(order.total_amount))}</span>
                       </div>
                     </div>
                   </div>

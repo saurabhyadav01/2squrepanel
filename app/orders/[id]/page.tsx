@@ -118,7 +118,7 @@ export default function OrderDetailPage() {
                       <div className="text-right">
                         <p className="font-semibold">{formatInr(item.price)}</p>
                         <p className="text-sm text-muted-foreground">
-                          Total: {formatInr(parseFloat(item.price) * item.quantity)}
+                          Total: {formatInr(Number(item.price) * item.quantity)}
                         </p>
                       </div>
                     </div>
@@ -163,7 +163,7 @@ export default function OrderDetailPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-semibold">${parseFloat(order.total_amount).toFixed(2)}</span>
+                <span className="font-semibold">${Number(order.total_amount).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping</span>
@@ -176,7 +176,7 @@ export default function OrderDetailPage() {
               <div className="border-t pt-4">
                 <div className="flex justify-between text-lg">
                   <span className="font-bold">Total</span>
-                  <span className="font-bold">${parseFloat(order.total_amount).toFixed(2)}</span>
+                  <span className="font-bold">${Number(order.total_amount).toFixed(2)}</span>
                 </div>
               </div>
               <div className="pt-4 border-t space-y-2">

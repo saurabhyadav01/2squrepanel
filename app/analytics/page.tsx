@@ -21,11 +21,13 @@ export default function AnalyticsPage() {
     queryFn: () => analyticsService.getRevenue(),
   });
 
-  // Transform revenue data for display
-  const monthlyRevenue = revenueData?.map((item: any) => ({
-    month: new Date(item.month).toLocaleDateString("en-US", { month: "short" }),
-    revenue: parseFloat(item.revenue || "0"),
-  })) || [];
+  // Transform revenue data for display - ensure it's always an array
+  const monthlyRevenue = Array.isArray(revenueData) 
+    ? revenueData.map((item) => ({
+        month: new Date(item.month).toLocaleDateString("en-US", { month: "short" }),
+        revenue: typeof item.revenue === "string" ? parseFloat(item.revenue) : (item.revenue || 0),
+      }))
+    : [];
 
   // Mock data for better visualization
   const last12Months = Array.from({ length: 12 }, (_, i) => {

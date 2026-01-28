@@ -3,7 +3,7 @@ import { Eye, EyeOff, Search, Loader2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export interface InputProps extends React.ComponentProps<"input"> {
+export interface InputProps extends Omit<React.ComponentProps<"input">, "size"> {
   error?: boolean;
   helperText?: string;
   leftIcon?: React.ReactNode;

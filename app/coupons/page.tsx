@@ -42,6 +42,9 @@ export default function CouponsPage() {
         validFrom: "",
         validUntil: "",
         usageLimit: "",
+        minPurchase: "",
+        maxDiscount: "",
+        isActive: true,
       });
       setIsAdding(false);
       toast.success("Coupon created successfully");
@@ -263,7 +266,7 @@ export default function CouponsPage() {
               <Label htmlFor="couponActive">Active</Label>
             </div>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 onClick={handleAdd}
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
