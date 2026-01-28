@@ -44,7 +44,7 @@ export default function NewProductPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const tagsArray = formData.tags.split(",").map((t) => t.trim()).filter(Boolean);
-    
+
     createMutation.mutate({
       name: formData.name,
       description: formData.description,
@@ -161,19 +161,48 @@ export default function NewProductPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="imageUrl">Product Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                  />
+
+                  <Label htmlFor="imageUrl">Product Image</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      id="imageUrl"
+                      type="url"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      className="flex-1"
+                    />
+                    <div className="relative">
+                      <input
+                        type="file"
+                        id="file-upload"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData({ ...formData, imageUrl: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                      >
+                        Upload
+                      </Button>
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Enter a direct link to the product image
+                    Enter a direct link or upload an image
                   </p>
                   {formData.imageUrl && (
-                    <div className="mt-3 w-32 h-32 border rounded-lg overflow-hidden">
+                    <div className="mt-3 w-32 h-32 border rounded-lg overflow-hidden relative group">
                       <img
                         src={formData.imageUrl}
                         alt="Preview"
@@ -182,6 +211,15 @@ export default function NewProductPage() {
                           (e.target as HTMLImageElement).style.display = "none";
                         }}
                       />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setFormData({ ...formData, imageUrl: "" })}
+                      >
+                        ×
+                      </Button>
                     </div>
                   )}
                 </div>

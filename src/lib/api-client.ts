@@ -6,8 +6,9 @@
  * Automatically includes JWT tokens from localStorage for authenticated requests.
  */
 
-// Get API base URL from environment variable or use default
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+// Get API base URL (Hardcoded to server IP as requested)
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://93.127.172.171:5000/api";
+const API_BASE_URL = "http://93.127.172.171:5000/api";
 
 // Debug: Log the API base URL (only in development mode)
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
@@ -105,13 +106,13 @@ class ApiClient {
       }
 
       const data = await response.json();
-      
+
       // Handle case where API returns { data: [...] } or direct array/object
       // Normalize response format for consistent handling
       if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
         return data.data as T;
       }
-      
+
       return data;
     } catch (error: any) {
       // Handle network errors (server unreachable, CORS issues, etc.)
