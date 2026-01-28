@@ -48,5 +48,13 @@ export const couponService = {
   async delete(id: string): Promise<void> {
     return apiClient.delete(`/coupons/${id}`);
   },
+
+  async validate(code: string, orderAmount: number) {
+    return apiClient.post<{
+      valid: boolean;
+      discount: number;
+      message?: string;
+    }>("/coupons/validate", { code, orderAmount });
+  },
 };
 

@@ -25,6 +25,7 @@ import Link from "next/link";
 import { authService } from "@/services/auth.service";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import "@/index.css";
 
 export default function RootLayout({
@@ -149,6 +150,7 @@ export default function RootLayout({
                       </h2>
                     </div>
                     <div className="flex items-center gap-3">
+                      <NotificationBell />
                       <ThemeToggle />
                     </div>
                   </header>

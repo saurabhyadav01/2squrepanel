@@ -12,7 +12,8 @@ import { toast } from "sonner";
 
 export default function CategoriesPage() {
   const [isAdding, setIsAdding] = useState(false);
-  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newCategory, setNewCategory] = useState({ name: "", description: "", slug: "", imageUrl: "", isActive: true });
   const queryClient = useQueryClient();
 
   const { data: categories, isLoading } = useQuery({
@@ -30,6 +31,19 @@ export default function CategoriesPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to create category");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => categoryService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      setEditingId(null);
+      setNewCategory({ name: "", description: "", slug: "", imageUrl: "", isActive: true });
+      toast.success("Category updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update category");
     },
   });
 
@@ -52,8 +66,44 @@ export default function CategoriesPage() {
     createMutation.mutate({
       name: newCategory.name,
       description: newCategory.description || undefined,
-      isActive: true,
+      slug: newCategory.slug || undefined,
+      imageUrl: newCategory.imageUrl || undefined,
+      isActive: newCategory.isActive,
     });
+  };
+
+  const handleEdit = (category: any) => {
+    setEditingId(category.id);
+    setNewCategory({
+      name: category.name,
+      description: category.description || "",
+      slug: category.slug || "",
+      imageUrl: category.image_url || "",
+      isActive: category.is_active,
+    });
+  };
+
+  const handleUpdate = () => {
+    if (!newCategory.name || !editingId) {
+      toast.error("Category name is required");
+      return;
+    }
+    updateMutation.mutate({
+      id: editingId,
+      data: {
+        name: newCategory.name,
+        description: newCategory.description || undefined,
+        slug: newCategory.slug || undefined,
+        imageUrl: newCategory.imageUrl || undefined,
+        isActive: newCategory.isActive,
+      },
+    });
+  };
+
+  const handleCancel = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setNewCategory({ name: "", description: "", slug: "", imageUrl: "", isActive: true });
   };
 
   return (
@@ -69,10 +119,10 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
-      {isAdding && (
-        <Card className="mb-6">
+      {(isAdding || editingId) && (
+        <Card className="mb-6 border-2">
           <CardHeader>
-            <CardTitle>New Category</CardTitle>
+            <CardTitle>{editingId ? "Edit Category" : "New Category"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -93,11 +143,42 @@ export default function CategoriesPage() {
                 placeholder="Enter description"
               />
             </div>
+            <div>
+              <Label htmlFor="catSlug">Slug (URL-friendly)</Label>
+              <Input
+                id="catSlug"
+                value={newCategory.slug}
+                onChange={(e) => setNewCategory({ ...newCategory, slug: e.target.value })}
+                placeholder="category-slug"
+              />
+            </div>
+            <div>
+              <Label htmlFor="catImage">Image URL</Label>
+              <Input
+                id="catImage"
+                value={newCategory.imageUrl}
+                onChange={(e) => setNewCategory({ ...newCategory, imageUrl: e.target.value })}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="catActive"
+                checked={newCategory.isActive}
+                onChange={(e) => setNewCategory({ ...newCategory, isActive: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="catActive">Active</Label>
+            </div>
             <div className="flex gap-2">
-              <Button onClick={handleAdd} disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Creating..." : "Save"}
+              <Button 
+                onClick={editingId ? handleUpdate : handleAdd} 
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save"}
               </Button>
-              <Button variant="outline" onClick={() => setIsAdding(false)}>
+              <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
             </div>

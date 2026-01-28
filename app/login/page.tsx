@@ -24,14 +24,20 @@ export default function AdminLoginPage() {
 
     try {
       const response = await authService.login(formData);
-      if (response.user.role === "admin") {
+      
+      // Check if user is admin
+      if (response && response.user && response.user.role === "admin") {
+        toast.success("Login successful!");
         router.push("/");
       } else {
         toast.error("Access denied. Admin access required.");
         authService.logout();
       }
     } catch (error: any) {
-      toast.error(error.message || "Login failed");
+      // Handle different error types
+      const errorMessage = error.message || "Login failed. Please check your credentials.";
+      toast.error(errorMessage);
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }

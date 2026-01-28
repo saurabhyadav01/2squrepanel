@@ -39,8 +39,9 @@ export default function OrdersPage() {
 
   // Filter orders
   const filteredOrders = orders?.filter((order) => {
-    const matchesSearch = order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer_email?.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+    const matchesSearch = order.id.toLowerCase().includes(searchLower) ||
+      (order.customer_email?.toLowerCase() || "").includes(searchLower);
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesPayment = paymentFilter === "all" || order.payment_status === paymentFilter;
     return matchesSearch && matchesStatus && matchesPayment;

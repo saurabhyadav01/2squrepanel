@@ -1,5 +1,14 @@
+/**
+ * Dashboard Page - Main Admin Dashboard
+ * 
+ * This is the main dashboard page for the 2Square admin panel.
+ * Displays key metrics, charts, recent orders, and quick actions.
+ * Uses React Query for data fetching and Recharts for data visualization.
+ */
+
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,19 +24,42 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Sparkles,
+  Filter,
 } from "lucide-react";
 import { productService } from "@/services/product.service";
 import { orderService } from "@/services/order.service";
 import { userService } from "@/services/user.service";
+import { analyticsService } from "@/services/analytics.service";
 import { formatInr } from "@/lib/priceUtils";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 
+// Color palette for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
+/**
+ * Dashboard Component
+ * 
+ * Main dashboard displaying:
+ * - Key metrics (revenue, orders, products, users)
+ * - Revenue and orders chart (last 7 days)
+ * - Order status distribution (pie chart)
+ * - Recent orders list with filtering
+ * - Quick action buttons
+ */
 export default function Dashboard() {
+  // State for filtering recent orders by status
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+
+  // Use analytics API for dashboard stats
+  const { data: analyticsStats, isLoading: analyticsLoading } = useQuery({
+    queryKey: ["analytics", "dashboard"],
+    queryFn: () => analyticsService.getDashboardStats(),
+  });
+
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ["products"],
     queryFn: () => productService.getAll(),
@@ -43,14 +75,25 @@ export default function Dashboard() {
     queryFn: () => userService.getAll(),
   });
 
-  // Calculate stats
-  const totalRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount), 0) || 0;
-  const totalOrders = orders?.length || 0;
-  const totalProducts = products?.length || 0;
-  const totalUsers = users?.length || 0;
-  const pendingOrders = orders?.filter((o) => o.status === "pending").length || 0;
-  const lowStockProducts = products?.filter((p) => p.stock_quantity < 10).length || 0;
-  const completedOrders = orders?.filter((o) => o.status === "delivered").length || 0;
+  // Ensure data is always an array (defensive check for API response format)
+  const productsArray = Array.isArray(products) ? products : [];
+  const ordersArray = Array.isArray(orders) ? orders : [];
+  const usersArray = Array.isArray(users) ? users : [];
+  
+  // Use recent orders from analytics if available
+  const recentOrdersFromAnalytics = analyticsStats?.recentOrders || [];
+
+  // Use analytics stats if available, otherwise fallback to manual calculation
+  const totalRevenue = analyticsStats?.totalRevenue ?? ordersArray.reduce((sum, order) => {
+    const amount = typeof order.total_amount === "string" ? parseFloat(order.total_amount) : (order.total_amount || 0);
+    return sum + amount;
+  }, 0);
+  const totalOrders = analyticsStats?.totalOrders ?? ordersArray.length;
+  const totalProducts = analyticsStats?.totalProducts ?? productsArray.length;
+  const totalUsers = analyticsStats?.totalUsers ?? usersArray.length;
+  const pendingOrders = analyticsStats?.pendingOrders ?? ordersArray.filter((o) => o.status === "pending").length;
+  const lowStockProducts = analyticsStats?.lowStockProducts ?? productsArray.filter((p) => p.stock_quantity < 10).length;
+  const completedOrders = analyticsStats?.ordersByStatus?.delivered ?? ordersArray.filter((o) => o.status === "delivered").length;
   
   // Calculate revenue growth (mock data for now)
   const revenueGrowth = 12.5;
@@ -73,21 +116,26 @@ export default function Dashboard() {
   const orderStatusData = [
     { name: "Delivered", value: completedOrders, color: "#00C49F" },
     { name: "Pending", value: pendingOrders, color: "#FFBB28" },
-    { name: "Processing", value: orders?.filter((o) => o.status === "processing").length || 0, color: "#0088FE" },
-    { name: "Cancelled", value: orders?.filter((o) => o.status === "cancelled").length || 0, color: "#FF8042" },
+    { name: "Processing", value: ordersArray.filter((o) => o.status === "processing").length || 0, color: "#0088FE" },
+    { name: "Cancelled", value: ordersArray.filter((o) => o.status === "cancelled").length || 0, color: "#FF8042" },
   ].filter(item => item.value > 0);
 
-  // Recent orders
-  const recentOrders = orders?.slice(0, 5) || [];
+  // Recent orders with filter - use analytics data if available
+  const ordersToFilter = recentOrdersFromAnalytics.length > 0 ? recentOrdersFromAnalytics : ordersArray;
+  const filteredRecentOrders = ordersToFilter.filter((order: any) => {
+    if (orderStatusFilter === "all") return true;
+    return order.status === orderStatusFilter;
+  });
+  const recentOrders = filteredRecentOrders.slice(0, 5);
   
   // Top products by stock
-  const topProducts = products?.slice(0, 5).map((p: any) => ({
-    name: p.name.length > 20 ? p.name.substring(0, 20) + "..." : p.name,
-    stock: p.stock_quantity,
+  const topProducts = productsArray.slice(0, 5).map((p: any) => ({
+    name: p.name?.length > 20 ? p.name.substring(0, 20) + "..." : p.name || "Unknown",
+    stock: p.stock_quantity || 0,
     sales: Math.floor(Math.random() * 50) + 10, // Mock sales data
-  })) || [];
+  }));
 
-  const isLoading = productsLoading || ordersLoading || usersLoading;
+  const isLoading = analyticsLoading || productsLoading || ordersLoading || usersLoading;
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -336,17 +384,32 @@ export default function Dashboard() {
         {/* Recent Orders */}
         <Card className="lg:col-span-2 border-2 hover:shadow-lg transition-all duration-300 animate-slide-up" style={{ animationDelay: "0.7s" }}>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <CardTitle className="flex items-center gap-2">
                 <Clock className="text-primary animate-pulse-slow" size={20} />
                 Recent Orders
               </CardTitle>
-              <Link href="/orders">
-                <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
-                  View All
-                  <ArrowUpRight size={14} className="ml-1" />
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <Filter className="mr-2" size={14} />
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Orders</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Link href="/orders">
+                  <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
+                    View All
+                    <ArrowUpRight size={14} className="ml-1" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -369,7 +432,7 @@ export default function Dashboard() {
                           <Sparkles className="text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={14} />
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {formatInr(parseFloat(order.total_amount))} • {new Date(order.created_at).toLocaleDateString()}
+                          {formatInr(typeof order.total_amount === "string" ? parseFloat(order.total_amount) : (order.total_amount || 0))} • {new Date(order.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-300 group-hover:scale-110 ${

@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { couponService } from "@/services/coupon.service";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Plus, Trash2, Copy, Edit } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CouponsPage() {
   const queryClient = useQueryClient();
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newCoupon, setNewCoupon] = useState({
     code: "",
     discount: "",
@@ -20,6 +21,9 @@ export default function CouponsPage() {
     validFrom: "",
     validUntil: "",
     usageLimit: "",
+    minPurchase: "",
+    maxDiscount: "",
+    isActive: true,
   });
 
   const { data: coupons, isLoading } = useQuery({
@@ -47,6 +51,29 @@ export default function CouponsPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => couponService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coupons"] });
+      setEditingId(null);
+      setNewCoupon({
+        code: "",
+        discount: "",
+        type: "percentage",
+        validFrom: "",
+        validUntil: "",
+        usageLimit: "",
+        minPurchase: "",
+        maxDiscount: "",
+        isActive: true,
+      });
+      toast.success("Coupon updated successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update coupon");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => couponService.delete(id),
     onSuccess: () => {
@@ -68,13 +95,53 @@ export default function CouponsPage() {
       return;
     }
 
-    createMutation.mutate({
+    const couponData = {
       code: newCoupon.code,
       discountType: newCoupon.type,
       discountValue: parseFloat(newCoupon.discount),
+      minPurchaseAmount: newCoupon.minPurchase ? parseFloat(newCoupon.minPurchase) : undefined,
+      maxDiscountAmount: newCoupon.maxDiscount ? parseFloat(newCoupon.maxDiscount) : undefined,
       usageLimit: newCoupon.usageLimit ? parseInt(newCoupon.usageLimit) : undefined,
       validFrom: new Date(newCoupon.validFrom).toISOString(),
       validUntil: new Date(newCoupon.validUntil).toISOString(),
+      isActive: newCoupon.isActive,
+    };
+
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data: couponData });
+    } else {
+      createMutation.mutate(couponData);
+    }
+  };
+
+  const handleEdit = (coupon: any) => {
+    setEditingId(coupon.id);
+    setNewCoupon({
+      code: coupon.code,
+      discount: coupon.discount_value.toString(),
+      type: coupon.discount_type,
+      validFrom: new Date(coupon.valid_from).toISOString().split('T')[0],
+      validUntil: new Date(coupon.valid_until).toISOString().split('T')[0],
+      usageLimit: coupon.usage_limit?.toString() || "",
+      minPurchase: coupon.min_purchase_amount?.toString() || "",
+      maxDiscount: coupon.max_discount_amount?.toString() || "",
+      isActive: coupon.is_active,
+    });
+    setIsAdding(true);
+  };
+
+  const handleCancel = () => {
+    setIsAdding(false);
+    setEditingId(null);
+    setNewCoupon({
+      code: "",
+      discount: "",
+      type: "percentage",
+      validFrom: "",
+      validUntil: "",
+      usageLimit: "",
+      minPurchase: "",
+      maxDiscount: "",
       isActive: true,
     });
   };
@@ -97,10 +164,10 @@ export default function CouponsPage() {
         </Button>
       </div>
 
-      {isAdding && (
-        <Card className="mb-6">
+      {(isAdding || editingId) && (
+        <Card className="mb-6 border-2">
           <CardHeader>
-            <CardTitle>New Coupon</CardTitle>
+            <CardTitle>{editingId ? "Edit Coupon" : "New Coupon"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -111,10 +178,11 @@ export default function CouponsPage() {
                   value={newCoupon.code}
                   onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
                   placeholder="WELCOME10"
+                  disabled={!!editingId}
                 />
               </div>
               <div>
-                <Label htmlFor="discount">Discount *</Label>
+                <Label htmlFor="discount">Discount Value *</Label>
                 <Input
                   id="discount"
                   type="number"
@@ -124,16 +192,36 @@ export default function CouponsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="type">Discount Type</Label>
                 <select
                   id="type"
                   value={newCoupon.type}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, type: e.target.value })}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, type: e.target.value as "percentage" | "fixed" })}
                   className="w-full px-3 py-2 border rounded-lg"
                 >
                   <option value="percentage">Percentage (%)</option>
-                  <option value="fixed">Fixed Amount ($)</option>
+                  <option value="fixed">Fixed Amount</option>
                 </select>
+              </div>
+              <div>
+                <Label htmlFor="minPurchase">Min Purchase Amount</Label>
+                <Input
+                  id="minPurchase"
+                  type="number"
+                  value={newCoupon.minPurchase}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, minPurchase: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="maxDiscount">Max Discount Amount</Label>
+                <Input
+                  id="maxDiscount"
+                  type="number"
+                  value={newCoupon.maxDiscount}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, maxDiscount: e.target.value })}
+                  placeholder="Unlimited"
+                />
               </div>
               <div>
                 <Label htmlFor="usageLimit">Usage Limit</Label>
@@ -142,11 +230,11 @@ export default function CouponsPage() {
                   type="number"
                   value={newCoupon.usageLimit}
                   onChange={(e) => setNewCoupon({ ...newCoupon, usageLimit: e.target.value })}
-                  placeholder="100"
+                  placeholder="Unlimited"
                 />
               </div>
               <div>
-                <Label htmlFor="validFrom">Valid From</Label>
+                <Label htmlFor="validFrom">Valid From *</Label>
                 <Input
                   id="validFrom"
                   type="date"
@@ -155,7 +243,7 @@ export default function CouponsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="validUntil">Valid Until</Label>
+                <Label htmlFor="validUntil">Valid Until *</Label>
                 <Input
                   id="validUntil"
                   type="date"
@@ -164,9 +252,24 @@ export default function CouponsPage() {
                 />
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="couponActive"
+                checked={newCoupon.isActive}
+                onChange={(e) => setNewCoupon({ ...newCoupon, isActive: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="couponActive">Active</Label>
+            </div>
             <div className="flex gap-2">
-              <Button onClick={handleAdd}>Create</Button>
-              <Button variant="outline" onClick={() => setIsAdding(false)}>
+              <Button 
+                onClick={handleAdd}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {createMutation.isPending || updateMutation.isPending ? "Saving..." : editingId ? "Update" : "Create"}
+              </Button>
+              <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
             </div>
@@ -207,19 +310,31 @@ export default function CouponsPage() {
                     {new Date(coupon.valid_until).toLocaleDateString()}
                   </p>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="mt-4 w-full"
-                  onClick={() => {
-                    if (confirm("Delete this coupon?")) {
-                      deleteMutation.mutate(coupon.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="mr-2" size={16} />
-                  Delete
-                </Button>
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleEdit(coupon)}
+                  >
+                    <Edit className="mr-2" size={16} />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      if (confirm("Delete this coupon?")) {
+                        deleteMutation.mutate(coupon.id);
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="mr-2" size={16} />
+                    Delete
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
